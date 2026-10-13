@@ -28,6 +28,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"bitbucket_pull_request":          tableBitbucketPullRequest(ctx),
 			"bitbucket_repository":            tableBitbucketRepository(ctx),
 			"bitbucket_repository_permission": tableBitbucketRepositoryPermission(ctx),
+			"bitbucket_repository_src":        tableBitbucketRepositorySrc(ctx),
 			"bitbucket_tag":                   tableBitbucketTag(ctx),
 			"bitbucket_workspace":             tableBitbucketWorkspace(ctx),
 			"bitbucket_workspace_member":      tableBitbucketWorkspaceMember(ctx),

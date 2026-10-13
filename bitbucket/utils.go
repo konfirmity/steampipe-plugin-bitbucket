@@ -3,9 +3,11 @@ package bitbucket
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/ktrysmt/go-bitbucket"
@@ -85,10 +87,19 @@ func authGet(ctx context.Context, d *plugin.QueryData, urlStr string) (*http.Res
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		resp.Body.Close()
-		return nil, fmt.Errorf("bitbucket: GET %s returned %d", urlStr, resp.StatusCode)
+		_ = resp.Body.Close()
+		return nil, &httpStatusError{URL: urlStr, StatusCode: resp.StatusCode}
 	}
 	return resp, nil
+}
+
+type httpStatusError struct {
+	URL        string
+	StatusCode int
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("bitbucket: GET %s returned %d", e.URL, e.StatusCode)
 }
 
 func parseRepoFullName(fullName string) (string, string) {
@@ -127,12 +138,22 @@ func decodeJson(response interface{}, respObject interface{}) error {
 
 // resource is not found error handling predicate
 func isNotFoundError(err error) bool {
-	return strings.Contains(err.Error(), "404")
+	return hasStatus(err, http.StatusNotFound)
 }
 
 // User don't have required access to all the api on resource
 func isForbiddenError(err error) bool {
-	return strings.Contains(err.Error(), "403")
+	return hasStatus(err, http.StatusForbidden)
+}
+
+// hasStatus checks the status code of an authGet error exactly, since its URL can contain a commit
+// hash with "404" in it; errors from the go-bitbucket client carry only text.
+func hasStatus(err error, code int) bool {
+	var statusErr *httpStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.StatusCode == code
+	}
+	return strings.Contains(err.Error(), strconv.Itoa(code))
 }
 
 type ListResponse struct {
